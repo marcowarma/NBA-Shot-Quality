@@ -1,0 +1,33 @@
+-- Build one row per field goal attempt (regular season, 2018-19 to 2022-23)
+-- from the Kaggle NBA Database play-by-play table.
+
+CREATE OR REPLACE TABLE shots AS
+WITH raw AS (
+    SELECT
+        g.season_id,
+        CAST(RIGHT(g.season_id, 4) AS INT)            AS season,
+        p.game_id,
+        g.game_date,
+        p.player1_id                                   AS player_id,
+        p.player1_name                                 AS player,
+        p.player1_team_abbreviation                    AS team,
+        p.period,
+        p.pctimestring,
+        p.eventmsgactiontype                           AS action_type,
+        -- Use the shooter's description, not the blocker's "BLOCK" line
+        CASE WHEN p.homedescription IS NOT NULL
+              AND p.homedescription NOT LIKE '% BLOCK (%'
+             THEN p.homedescription
+             ELSE p.visitordescription END             AS descr,
+        CASE WHEN p.eventmsgtype = 1 THEN 1 ELSE 0 END AS made
+    FROM nba.play_by_play p
+    JOIN nba.game g ON p.game_id = g.game_id
+    WHERE p.eventmsgtype IN (1, 2)          -- 1 = made shot, 2 = missed shot
+      AND g.season_id BETWEEN '22018' AND '22022'
+)
+SELECT *,
+    TRY_CAST(regexp_extract(descr, '(\d+)''', 1) AS INT)        AS distance_ft,
+    CASE WHEN descr LIKE '%3PT%' THEN 1 ELSE 0 END              AS is_three,
+    CAST(split_part(pctimestring, ':', 1) AS INT) * 60
+      + CAST(split_part(pctimestring, ':', 2) AS INT)           AS secs_left_in_period
+FROM raw;

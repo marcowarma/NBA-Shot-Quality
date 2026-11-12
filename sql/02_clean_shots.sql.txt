@@ -1,0 +1,19 @@
+-- About 9% of shots have no recorded distance (mostly tip-ins/putbacks at the rim
+-- and some 3PT jump shots). Fill each with the median distance for that shot type
+-- and flag it, so imputed values stay traceable.
+
+CREATE OR REPLACE TABLE shots_clean AS
+WITH medians AS (
+    SELECT action_type, is_three,
+           MEDIAN(distance_ft) AS med_dist
+    FROM shots
+    WHERE distance_ft IS NOT NULL
+    GROUP BY action_type, is_three
+)
+SELECT s.*,
+       COALESCE(s.distance_ft, m.med_dist,
+                CASE WHEN s.is_three = 1 THEN 25 ELSE 2 END) AS dist,
+       (s.distance_ft IS NULL)::INT                         AS dist_imputed
+FROM shots s
+LEFT JOIN medians m
+  ON s.action_type = m.action_type AND s.is_three = m.is_three;
