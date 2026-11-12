@@ -5,8 +5,6 @@ Which players and teams take the best shots, and who makes more than expected. G
 
 
 
-About 9% of shots had no recorded distance; I filled these with the median distance for that shot type. Filled-in threes shot slightly better (38.8% vs. 35.3%), suggesting made threes are somewhat more likely to lack a distance in the play-by-play data.
-
 
 ![Points per shot by distance](figures/points_per_shot_by_distance.png)
 
